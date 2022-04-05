@@ -1,6 +1,8 @@
 #include "BaseEthernet.h"
 
 BaseEthernet::BaseEthernet(BasePreferences *basePreferences): basePreferences(basePreferences) {
+	pinMode(ETHERNET_RESET_PIN, OUTPUT);
+	digitalWrite(ETHERNET_RESET_PIN, HIGH);
 	Ethernet.init(ETHERNET_CS_PIN);
 	status = NoHardware;
 	if(Ethernet.hardwareStatus() != EthernetNoHardware){
@@ -25,7 +27,7 @@ bool BaseEthernet::initEthernet() {
 	}
 
 	setStatus(Connecting);
-	if (Ethernet.begin(mac) == 0) {
+	if (Ethernet.begin(mac, 30000, 4000) == 0) {
 #ifdef DEBUG_ETHERNET
 		Serial.println("Failed to configure Ethernet using DHCP");
 #endif
@@ -88,9 +90,9 @@ String BaseEthernet::ethernetHttpGet(const String& path) {
 			resultStr += buff;
 		}
 	}
-
+#ifdef DEBUG_ETHERNET
 	Serial.println("HTTP GET done :\r\n" + resultStr);
-
+#endif
 	return resultStr;
 }
 

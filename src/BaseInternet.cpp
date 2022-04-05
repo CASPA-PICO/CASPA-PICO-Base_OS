@@ -1,6 +1,6 @@
 #include "BaseInternet.h"
 
-BaseInternet::BaseInternet(BaseEthernet *baseEthernet, BasePreferences *basePreferences) : baseEthernet(baseEthernet), basePreferences(basePreferences) {
+BaseInternet::BaseInternet(BaseEthernet *baseEthernet, BaseWifi *baseWifi, BasePreferences *basePreferences) : baseEthernet(baseEthernet), baseWifi(baseWifi), basePreferences(basePreferences) {
 
 }
 
@@ -9,31 +9,41 @@ bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 	Serial.println("Getting time from server...");
 #endif
 	vTaskDelay(pdMS_TO_TICKS(1000));
-	String serverResponse;
-	if(source == EthernetSource){
-		serverResponse  = baseEthernet->ethernetHttpGet("/api/time");
-	}
-	if (serverResponse == "") {
-		if(retry > 0){
-			vTaskDelay(pdMS_TO_TICKS(1000));
-			return getTimeFromServer(source, retry-1);
+	String resultStr;
+	if(source == EthernetSource) {
+		String serverResponse = baseEthernet->ethernetHttpGet("/api/time");
+		HttpParser timeResponse;
+		if (serverResponse == "") {
+			if(retry > 0){
+				vTaskDelay(pdMS_TO_TICKS(1000));
+				return getTimeFromServer(source, retry-1);
+			}
+			return false;
 		}
-		return false;
+		timeResponse.parseResponse(serverResponse);
+		if (timeResponse.getStatusCode() != 200) {
+#ifdef DEBUG_ETHERNET
+			Serial.println("Wrong status code " + String(timeResponse.getStatusCode()) + " !");
+#endif
+			if(retry > 0){
+				vTaskDelay(pdMS_TO_TICKS(1000));
+				return getTimeFromServer(source, retry-1);
+			}
+			return false;
+		}
+		resultStr = timeResponse.getBody();
+	}
+	else if(source == WifiSource){
+		resultStr = baseWifi->wifiHttpGet("/api/time");
+		if (resultStr == "") {
+			if(retry > 0){
+				vTaskDelay(pdMS_TO_TICKS(1000));
+				return getTimeFromServer(source, retry-1);
+			}
+			return false;
+		}
 	}
 
-	HttpParser timeResponse;
-	timeResponse.parseResponse(serverResponse);
-	if (timeResponse.getStatusCode() != 200) {
-#ifdef DEBUG_ETHERNET
-		Serial.println("Wrong status code " + String(timeResponse.getStatusCode()) + " !");
-#endif
-		if(retry > 0){
-			vTaskDelay(pdMS_TO_TICKS(1000));
-			return getTimeFromServer(source, retry-1);
-		}
-		return false;
-	}
-	String resultStr = timeResponse.getBody();
 	unsigned long long result = 0;
 	for (int i = 0; i < resultStr.length() && resultStr[i] >= '0' && resultStr[i] <= '9'; ++i) {
 		result = result * 10 + resultStr[i] - '0';
@@ -56,29 +66,37 @@ bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 }
 
 bool BaseInternet::getDeviceKeyFromServer(BaseInternet::Source source, int retry) {
-	String serverResponse;
 	if(source == EthernetSource){
-		serverResponse = baseEthernet->ethernetHttpGet(String("/api/devices/activate?activationKey=") + basePreferences->getDeviceActivationKey());
-	}
-
-	if (serverResponse == "") {
-		if(retry > 0){
-			vTaskDelay(pdMS_TO_TICKS(1000));
-			return getDeviceKeyFromServer(source, retry-1);
+		String serverResponse = baseEthernet->ethernetHttpGet(String("/api/devices/activate?activationKey=") + basePreferences->getDeviceActivationKey());
+		if (serverResponse == "") {
+			if(retry > 0){
+				vTaskDelay(pdMS_TO_TICKS(1000));
+				return getDeviceKeyFromServer(source, retry-1);
+			}
+			return false;
 		}
-		return false;
+		HttpParser deviceKeyResponse;
+		deviceKeyResponse.parseResponse(serverResponse);
+		if(deviceKeyResponse.getStatusCode() == 200){
+#ifdef DEBUG_ETHERNET
+			Serial.println("Got device key : "+deviceKeyResponse.getBody());
+#endif
+			basePreferences->setDeviceKey(deviceKeyResponse.getBody());
+			return true;
+		}
+	}
+	else if(source == WifiSource){
+		String deviceKeyResponse = baseWifi->wifiHttpGet(String("/api/devices/activate?activationKey=") + basePreferences->getDeviceActivationKey());
+		if (deviceKeyResponse != "") {
+#ifdef DEBUG_WIFI
+			Serial.println("Got device key : "+deviceKeyResponse);
+#endif
+			basePreferences->setDeviceKey(deviceKeyResponse);
+		}
 	}
 
-	HttpParser deviceKeyResponse;
-	deviceKeyResponse.parseResponse(serverResponse);
-	if(deviceKeyResponse.getStatusCode() == 200){
-#ifdef DEBUG_ETHERNET
-		Serial.println("Got device key : "+deviceKeyResponse.getBody());
-#endif
-		basePreferences->setDeviceKey(deviceKeyResponse.getBody());
-		return true;
-	}
-	else if(retry > 0){
+
+	if(retry > 0){
 		vTaskDelay(pdMS_TO_TICKS(1000));
 		return getDeviceKeyFromServer(source, retry-1);
 	}
@@ -86,28 +104,36 @@ bool BaseInternet::getDeviceKeyFromServer(BaseInternet::Source source, int retry
 }
 
 bool BaseInternet::checkDeviceOnServer(Source source, int retry) {
-	String serverResponse;
 	if(source == EthernetSource){
+		String serverResponse;
 		serverResponse = baseEthernet->ethernetHttpGet(String("/api/devices/check?key=") + basePreferences->getDeviceKey());
-	}
-
-	if (serverResponse == "") {
-		if(retry > 0){
-			vTaskDelay(pdMS_TO_TICKS(1000));
-			return checkDeviceOnServer(source, retry-1);
+		if (serverResponse == "") {
+			if(retry > 0){
+				vTaskDelay(pdMS_TO_TICKS(1000));
+				return checkDeviceOnServer(source, retry-1);
+			}
+			return false;
 		}
-		return false;
+		HttpParser deviceKeyResponse;
+		deviceKeyResponse.parseResponse(serverResponse);
+		if(deviceKeyResponse.getStatusCode() == 200){
+#ifdef DEBUG_ETHERNET
+			Serial.println("Device check OK");
+#endif
+			return true;
+		}
+	}
+	else if(source == WifiSource){
+		String deviceKeyResponse = baseWifi->wifiHttpGet(String("/api/devices/check?key=") + basePreferences->getDeviceKey());
+		if (deviceKeyResponse != "") {
+#ifdef DEBUG_WIFI
+			Serial.println("Device check OK");
+#endif
+			return true;
+		}
 	}
 
-	HttpParser deviceKeyResponse;
-	deviceKeyResponse.parseResponse(serverResponse);
-	if(deviceKeyResponse.getStatusCode() == 200){
-#ifdef DEBUG_ETHERNET
-		Serial.println("Device check OK");
-#endif
-		return true;
-	}
-	else if(retry > 0){
+	if(retry > 0){
 		vTaskDelay(pdMS_TO_TICKS(1000));
 		return checkDeviceOnServer(source, retry-1);
 	}

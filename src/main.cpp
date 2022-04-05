@@ -27,16 +27,16 @@ void setup() {
 	basePreferences = new BasePreferences();
 
 
-	xTaskCreatePinnedToCore(ethernetTask, "Ethernet task", 10240, nullptr, 1, &ethernetTask_handle, 1);
+	xTaskCreatePinnedToCore(ethernetTask, "Ethernet task", 20480, nullptr, 1, &ethernetTask_handle, 1);
 	while(baseEthernet == nullptr){ vTaskDelay(pdMS_TO_TICKS(500));}
-	xTaskCreatePinnedToCore(wifiTask, "Wifi task", 10240, nullptr, 2, &wifiTask_handle, 0);
+	xTaskCreatePinnedToCore(wifiTask, "Wifi task", 20480, nullptr, 2, &wifiTask_handle, 0);
 	while(baseWifi == nullptr){ vTaskDelay(pdMS_TO_TICKS(500));}
-	xTaskCreatePinnedToCore(displayTask, "Display task", 10240, nullptr, 4, &displayTask_handle, 0);
+	xTaskCreatePinnedToCore(displayTask, "Display task", 20480, nullptr, 4, &displayTask_handle, 0);
 	while(baseDisplay == nullptr){ vTaskDelay(pdMS_TO_TICKS(500));}
-	xTaskCreatePinnedToCore(internetTask, "Internet task", 10240, nullptr, 3, &internetTask_handle, 0);
+	xTaskCreatePinnedToCore(internetTask, "Internet task", 20480, nullptr, 3, &internetTask_handle, 0);
 	while(baseInternet == nullptr){ vTaskDelay(pdMS_TO_TICKS(500));}
 
-	esp_task_wdt_init(20, true);
+	esp_task_wdt_init(2*60, true);
 	esp_task_wdt_add(ethernetTask_handle);
 	esp_task_wdt_add(internetTask_handle);
 	esp_task_wdt_add(displayTask_handle);
@@ -50,6 +50,7 @@ void loop() {
 
 [[noreturn]] static void ethernetTask(void *pvParameters) {
 	baseEthernet = new BaseEthernet(basePreferences);
+	vTaskDelay(pdMS_TO_TICKS(2*1000));
 	int count = 0;
 	while (true) {
 		esp_task_wdt_reset();
@@ -85,7 +86,7 @@ void loop() {
 }
 
 [[noreturn]] static void internetTask(void *pvParameters){
-	baseInternet = new BaseInternet(baseEthernet, basePreferences);
+	baseInternet = new BaseInternet(baseEthernet, baseWifi, basePreferences);
 	while(true){
 		esp_task_wdt_reset();
 		baseDisplay->setState(BaseDisplay::Booting);
@@ -94,6 +95,9 @@ void loop() {
 
 		if(baseEthernet->getStatus() == BaseEthernet::Connected){
 			internetSource = BaseInternet::EthernetSource;
+		}
+		else if(baseWifi->getWifiStatus() == BaseWifi::Connected){
+			internetSource = BaseInternet::WifiSource;
 		}
 		else{
 			internetSource = BaseInternet::NoSource;
@@ -167,18 +171,28 @@ void loop() {
 			if(WiFi.status() == WL_CONNECTED){
 				baseWifi->setWifiStatus(BaseWifi::Connected);
 				basePreferences->setRouterSSIDandPassword(baseWifi->getRouterSSID(), baseWifi->getRouterPassword());
+#ifdef DEBUG_WIFI
+				Serial.println("Connected to wifi network !");
+#endif
 			}
 			else{
 				baseWifi->failedConnection();
 			}
 		}
 		else if(baseWifi->getWifiStatus() == BaseWifi::AccessPointWaitingCredentials
-		&& basePreferences->getRouterSSID() != "" && basePreferences->getRouterPassword() != "" && millis()-lastSavedAttemp > 80*1000){
+		&& basePreferences->getRouterSSID() != "" && basePreferences->getRouterPassword() != "" && millis()-lastSavedAttemp > 80*1000 && WiFi.scanComplete() != -1){
 			baseWifi->loadRouterSettingsFromPreferences();
 		}
 		else if(baseWifi->getWifiStatus() == BaseWifi::Connected && !WiFi.isConnected()){
 			WiFi.disconnect();
 			baseWifi->setWifiStatus(BaseWifi::AccessPointWaitingCredentials);
+			if(baseWifi->getDnsStatus() == BaseWifi::Stopped){
+				baseWifi->startAccessPoint();
+			}
+		}
+		else if(baseWifi->getWifiStatus() == BaseWifi::Connected && WiFi.isConnected()
+				&& millis()-lastSavedAttemp > 120*1000 && baseWifi->getDnsStatus() == BaseWifi::Running){
+			baseWifi->stopAccessPoint();
 		}
 
 		switch(baseWifi->getDnsStatus()){

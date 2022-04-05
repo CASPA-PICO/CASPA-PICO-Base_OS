@@ -5,6 +5,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <DNSServer.h>
+#include <HTTPClient.h>
 #include <esp_task_wdt.h>
 
 #include "BasePreferences.h"
@@ -16,6 +17,7 @@
 #define WIFI_PASSWORD "Caspa123"
 
 #define DEBUG_WIFI
+#define SERVER_URL "192.168.43.183"
 
 class BaseWifi : public AsyncWebHandler{
 public:
@@ -24,6 +26,7 @@ public:
 
 	BaseWifi(BasePreferences *basePreferences);
 	void startAccessPoint();
+	void stopAccessPoint();
 
 	DNS_Status getDnsStatus() const;
 	void startDNSServer();
@@ -45,6 +48,8 @@ public:
 	String getRouterPassword(){return routerPassword;}
 
 	void loadRouterSettingsFromPreferences();
+
+	String wifiHttpGet(const String& path);
 
 private:
 	IPAddress apIP = IPAddress(192,168,0,1);

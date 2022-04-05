@@ -4,21 +4,30 @@
 BaseWifi::BaseWifi(BasePreferences *basePreferences) : webServer(AsyncWebServer(PORT_SERVER)){
 	WiFi.mode(WIFI_OFF);
 	preferences = basePreferences;
+	webServer.addHandler(this);
 }
 
 void BaseWifi::startAccessPoint() {
 	WiFi.mode(WIFI_AP_STA);
-	WiFi.scanNetworks(true, false, false, 500, 0);
+	WiFi.scanNetworks(true, false);
 	WiFi.softAPConfig(apIP, apIP, subnet);
 	WiFi.softAP(ssid, password, 1, 0, 4);
 
-	webServer.addHandler(this);
 	webServer.begin();
 #ifdef DEBUG_WIFI
 	Serial.println("Wifi access point and server started !");
 #endif
 	startDNSServer();
 	loadRouterSettingsFromPreferences();
+}
+
+void BaseWifi::stopAccessPoint() {
+	WiFi.mode(WIFI_STA);
+	webServer.end();
+	stopDNSServer();
+#ifdef DEBUG_WIFI
+	Serial.println("Wifi access point and server stopped !");
+#endif
 }
 
 BaseWifi::DNS_Status BaseWifi::getDnsStatus() const {
@@ -93,7 +102,8 @@ void BaseWifi::handleRequest(AsyncWebServerRequest *request) {
 			Serial.println("Refreshing wifi networks");
 #endif
 			unsigned long start = millis();
-			while(WiFi.scanNetworks(true, false) < 0 && millis()-start < 10*1000){
+			WiFi.scanNetworks(true, false);
+			while(WiFi.scanComplete() == -1 && millis()-start < 10*1000){
 				esp_task_wdt_reset();
 				vTaskDelay(pdMS_TO_TICKS(1000));
 			}
@@ -226,4 +236,24 @@ String BaseWifi::generateConnectedPage() const {
 void BaseWifi::loadRouterSettingsFromPreferences() {
 	routerSSID = preferences->getRouterSSID();
 	routerPassword = preferences->getRouterPassword();
+}
+
+String BaseWifi::wifiHttpGet(const String &path) {
+	HTTPClient http;
+	if(!http.begin(SERVER_URL, 80, path)) {
+#ifdef DEBUG_WIFI
+		Serial.println(String("Couldn't connect to ") + String(SERVER_URL) + String(" on port 80 !"));
+#endif
+		return "";
+	}
+	int httpResponseCode = http.GET();
+	String resultStr = http.getString();
+#ifdef DEBUG_WIFI
+	Serial.println("Got response from server over Wifi code "+String(httpResponseCode));
+	Serial.println("Received : "+resultStr);
+#endif
+	if(httpResponseCode == 200){
+		return resultStr;
+	}
+	return "";
 }
