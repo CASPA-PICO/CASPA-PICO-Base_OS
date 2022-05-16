@@ -16,3 +16,5 @@ Lorsque des données sont prêtes à être transférer depuis la base, elle se c
 Lorsque la connexion a été établi, elle envoie l'heure puis attend de recevoir tous les fichiers depuis le capteur. Les fichiers récupérés sont enregistrés dans le stockage local de la base, en attente d'être transféré sur internet par la tâche Internet</p>
 <h3>Tâche Affichage</h3>
 <p>La tâche affichage gère l'écran de la base. Elle le met à jour en fonction de l'état des différents composants de la base (Ethernet et Wifi) et en fonction de l'état (transfert Bluetooth, transfert Wifi, authentification web)</p>
+<h2>Montage de la base</h2>
+<img src="https://i.ibb.co/0M8Bkfx/sch-ma-interconnexion.jpg" alt="sch-ma-interconnexion" border="0" />
