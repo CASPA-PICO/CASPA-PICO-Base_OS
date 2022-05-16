@@ -8,7 +8,12 @@ BaseWifi::BaseWifi(BasePreferences *basePreferences) : webServer(AsyncWebServer(
 }
 
 void BaseWifi::startAccessPoint() {
-	WiFi.mode(WIFI_AP_STA);
+	if(!WiFi.mode(WIFI_AP_STA)){
+#ifdef DEBUG_WIFI
+		Serial.println("Failed to startAccessPoint : failed to change WiFi mode to WIFI_AP_STA !");
+		return;
+#endif
+	}
 	WiFi.scanNetworks(true, false);
 	WiFi.softAPConfig(apIP, apIP, subnet);
 	WiFi.softAP(ssid, password, 1, 0, 4);
@@ -240,6 +245,11 @@ void BaseWifi::loadRouterSettingsFromPreferences() {
 
 String BaseWifi::wifiHttpGet(const String &path) {
 	HTTPClient http;
+	http.setTimeout(10*1000);
+	http.setConnectTimeout(10*1000);
+#ifdef DEBUG_WIFI
+	Serial.println(String("Connecting to ") + String(SERVER_URL)+path);
+#endif
 	if(!http.begin(SERVER_URL, 80, path)) {
 #ifdef DEBUG_WIFI
 		Serial.println(String("Couldn't connect to ") + String(SERVER_URL) + String(" on port 80 !"));
@@ -248,6 +258,7 @@ String BaseWifi::wifiHttpGet(const String &path) {
 	}
 	int httpResponseCode = http.GET();
 	String resultStr = http.getString();
+	http.end();
 #ifdef DEBUG_WIFI
 	Serial.println("Got response from server over Wifi code "+String(httpResponseCode));
 	Serial.println("Received : "+resultStr);
@@ -256,4 +267,112 @@ String BaseWifi::wifiHttpGet(const String &path) {
 		return resultStr;
 	}
 	return "";
+}
+
+bool BaseWifi::sendFileHTTPPost(const String &path, File *file) {
+	HTTPClient http;
+	http.setTimeout(10*1000);
+	http.setConnectTimeout(10*1000);
+#ifdef DEBUG_WIFI
+	Serial.println(String("Connecting to ") + String(SERVER_URL)+path);
+#endif
+	if(!http.begin(SERVER_URL, 80)) {
+#ifdef DEBUG_WIFI
+		Serial.println(String("Couldn't begin connection to ") + String(SERVER_URL) + String(" on port 80 !"));
+#endif
+		return false;
+	}
+
+	if(!http.connect()){
+#ifdef DEBUG_WIFI
+		Serial.println(String("Couldn't connect to ") + String(SERVER_URL) + String(" on port 80 !"));
+#endif
+	}
+
+#ifdef DEBUG_WIFI
+	Serial.println("Wifi : sending file header");
+#endif
+	WiFiClient *stream = http.getStreamPtr();
+	if(stream == nullptr){
+#ifdef DEBUG_WIFI
+		Serial.println("Wifi : http stream is null !");
+#endif
+		return false;
+	}
+	stream->write("POST ");
+	stream->write(path.c_str());
+	stream->write(" HTTP/1.1\r\n");
+	stream->write("Connection: close\r\n");
+	stream->write("Content-Length: ");
+	stream->write(String(file->size()).c_str());
+	stream->write("\r\nfilename: ");
+	stream->write(file->name());
+	stream->write("\r\nX-API-Key: ");
+	stream->write(preferences->getDeviceKey().c_str());
+	stream->write("\r\n\r\n");
+	stream->flush();
+
+	char buff[512];
+	int currentRead;
+	int streamWritten;
+#ifdef DEBUG_WIFI
+	Serial.println("Wifi : sending file content : "+String(file->size())+" bytes");
+#endif
+	sizePOSTTotal = file->size();
+	sizePOSTSent = 0;
+	while(sizePOSTSent < sizePOSTTotal && http.connected()){
+		currentRead = file->readBytes(buff, 512);
+		streamWritten = 0;
+		while(currentRead > streamWritten && http.connected()){
+			streamWritten += stream->write(buff+streamWritten, currentRead);
+			stream->flush();
+			vTaskDelay(20);
+			esp_task_wdt_reset();
+		}
+		sizePOSTSent += currentRead;
+	}
+	sizePOSTTotal = -1;
+	sizePOSTSent = -1;
+
+#ifdef DEBUG_WIFI
+	Serial.println("Wifi : done sending file content");
+#endif
+
+	unsigned long expire = millis() + 30*1000;
+	String responseStr = "";
+	while(millis() < expire && stream->connected()){
+		if(stream->available()){
+			responseStr = http.getString();
+		}
+		else{
+			vTaskDelay(pdMS_TO_TICKS(200));
+		}
+		esp_task_wdt_reset();
+	}
+
+	http.end();
+
+	HttpParser httpParser;
+	httpParser.parseResponse(responseStr);
+
+	if(httpParser.getStatusCode() == 200){
+#ifdef DEBUG_WIFI
+		Serial.println("File sent successfully !");
+#endif
+		return true;
+	}
+#ifdef DEBUG_WIFI
+	Serial.println("Wrong return code sending file : "+String(httpParser.getStatusCode()));
+	Serial.println("Reponse body :");
+	Serial.println(httpParser.getBody());
+#endif
+	return false;
+}
+
+int BaseWifi::getSizePostTotal() const {
+	return sizePOSTTotal;
+}
+
+int BaseWifi::getSizePostSent() const {
+	return sizePOSTSent;
 }

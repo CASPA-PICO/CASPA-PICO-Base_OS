@@ -1,6 +1,6 @@
 #include "BaseInternet.h"
 
-BaseInternet::BaseInternet(BaseEthernet *baseEthernet, BaseWifi *baseWifi, BasePreferences *basePreferences) : baseEthernet(baseEthernet), baseWifi(baseWifi), basePreferences(basePreferences) {
+BaseInternet::BaseInternet(BaseEthernet *baseEthernet, BaseWifi *baseWifi, BaseBluetooth *baseBluetooth, BasePreferences *basePreferences) : baseEthernet(baseEthernet), baseWifi(baseWifi), baseBluetooth(baseBluetooth), basePreferences(basePreferences) {
 
 }
 
@@ -15,7 +15,7 @@ bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 		HttpParser timeResponse;
 		if (serverResponse == "") {
 			if(retry > 0){
-				vTaskDelay(pdMS_TO_TICKS(1000));
+				vTaskDelay(pdMS_TO_TICKS(5000));
 				return getTimeFromServer(source, retry-1);
 			}
 			return false;
@@ -26,7 +26,7 @@ bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 			Serial.println("Wrong status code " + String(timeResponse.getStatusCode()) + " !");
 #endif
 			if(retry > 0){
-				vTaskDelay(pdMS_TO_TICKS(1000));
+				vTaskDelay(pdMS_TO_TICKS(5000));
 				return getTimeFromServer(source, retry-1);
 			}
 			return false;
@@ -37,7 +37,7 @@ bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 		resultStr = baseWifi->wifiHttpGet("/api/time");
 		if (resultStr == "") {
 			if(retry > 0){
-				vTaskDelay(pdMS_TO_TICKS(1000));
+				vTaskDelay(pdMS_TO_TICKS(5000));
 				return getTimeFromServer(source, retry-1);
 			}
 			return false;
@@ -59,7 +59,7 @@ bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 		return true;
 	}
 	else if(retry > 0){
-		vTaskDelay(pdMS_TO_TICKS(1000));
+		vTaskDelay(pdMS_TO_TICKS(5000));
 		return getTimeFromServer(source, retry-1);
 	}
 	return false;
@@ -70,7 +70,7 @@ bool BaseInternet::getDeviceKeyFromServer(BaseInternet::Source source, int retry
 		String serverResponse = baseEthernet->ethernetHttpGet(String("/api/devices/activate?activationKey=") + basePreferences->getDeviceActivationKey());
 		if (serverResponse == "") {
 			if(retry > 0){
-				vTaskDelay(pdMS_TO_TICKS(1000));
+				vTaskDelay(pdMS_TO_TICKS(5000));
 				return getDeviceKeyFromServer(source, retry-1);
 			}
 			return false;
@@ -97,7 +97,7 @@ bool BaseInternet::getDeviceKeyFromServer(BaseInternet::Source source, int retry
 
 
 	if(retry > 0){
-		vTaskDelay(pdMS_TO_TICKS(1000));
+		vTaskDelay(pdMS_TO_TICKS(5000));
 		return getDeviceKeyFromServer(source, retry-1);
 	}
 	return false;
@@ -109,7 +109,7 @@ bool BaseInternet::checkDeviceOnServer(Source source, int retry) {
 		serverResponse = baseEthernet->ethernetHttpGet(String("/api/devices/check?key=") + basePreferences->getDeviceKey());
 		if (serverResponse == "") {
 			if(retry > 0){
-				vTaskDelay(pdMS_TO_TICKS(1000));
+				vTaskDelay(pdMS_TO_TICKS(5000));
 				return checkDeviceOnServer(source, retry-1);
 			}
 			return false;
@@ -134,10 +134,50 @@ bool BaseInternet::checkDeviceOnServer(Source source, int retry) {
 	}
 
 	if(retry > 0){
-		vTaskDelay(pdMS_TO_TICKS(1000));
+		vTaskDelay(pdMS_TO_TICKS(5000));
 		return checkDeviceOnServer(source, retry-1);
 	}
 	return false;
 }
 
+void BaseInternet::syncLocalFiles(BaseInternet::Source source) {
+	if(source == EthernetSource){
+		File root = SPIFFS.open("/", FILE_READ);
+		File file = root.openNextFile();
+		String filePath;
+		while(file){
+			if(baseEthernet->sendFileHTTPPost("/api/devices/uploadData", &file)){
+#ifdef DEBUG_WIFI
+				Serial.println("Successfully sent file over ethernet : "+String(file.path()));
+#endif
+				filePath = file.path();
+				file.close();
+				SPIFFS.remove(filePath.c_str());
+			}
+			else{
+				file.close();
+			}
+			file = root.openNextFile();
+		}
+	}
+	else if(source == WifiSource){
+		File root = SPIFFS.open("/", FILE_READ);
+		File file = root.openNextFile();
+		String filePath;
 
+		while(file){
+			if(baseWifi->sendFileHTTPPost("/api/devices/uploadData", &file)){
+#ifdef DEBUG_WIFI
+				Serial.println("Successfully sent file over wifi : "+String(file.path()));
+#endif
+				filePath = file.path();
+				file.close();
+				SPIFFS.remove(filePath.c_str());
+			}
+			else{
+				file.close();
+			}
+			file = root.openNextFile();
+		}
+	}
+}

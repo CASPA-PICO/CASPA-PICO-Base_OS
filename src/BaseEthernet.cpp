@@ -27,7 +27,7 @@ bool BaseEthernet::initEthernet() {
 	}
 
 	setStatus(Connecting);
-	if (Ethernet.begin(mac, 30000, 4000) == 0) {
+	if (Ethernet.begin(mac, 10*1000, 4*1000) == 0) {
 #ifdef DEBUG_ETHERNET
 		Serial.println("Failed to configure Ethernet using DHCP");
 #endif
@@ -45,6 +45,7 @@ bool BaseEthernet::initEthernet() {
 
 String BaseEthernet::ethernetHttpGet(const String& path) {
 	EthernetClient client;
+	client.setTimeout(10*1000);
 	if (!client.connect(SERVER_URL, 80)) {
 #ifdef DEBUG_ETHERNET
 		Serial.println(String("Couldn't connect to ") + String(SERVER_URL) + String(" on port 80 !"));
@@ -62,8 +63,10 @@ String BaseEthernet::ethernetHttpGet(const String& path) {
 	String request = HttpParser::getRequestStr(path);
 
 #ifdef DEBUG_ETHERNET
-	Serial.println("HTTP GET :\r\n" + request);
+	Serial.println("Ethernet : sending file header");
 #endif
+
+
 
 	char requestArray[512];
 	request.toCharArray(requestArray, 512);
@@ -151,5 +154,100 @@ void BaseEthernet::printStatus(BaseEthernet::Status status) {
 			Serial.println("connected");
 			break;
 	}
+}
+
+bool BaseEthernet::sendFileHTTPPost(const String &path, File *file) {
+	EthernetClient client;
+	client.setTimeout(10*1000);
+	if (!client.connect(SERVER_URL, 80)) {
+#ifdef DEBUG_ETHERNET
+		Serial.println(String("Couldn't connect to ") + String(SERVER_URL) + String(" on port 80 !"));
+#endif
+		if(Ethernet.hardwareStatus() == EthernetNoHardware){
+			setStatus(NoHardware);
+		}
+		else if(Ethernet.linkStatus() != LinkON){
+			setStatus(NoLink);
+		}
+
+		return false;
+	}
+
+	client.write("POST ");
+	client.write(path.c_str());
+	client.write(" HTTP/1.1\r\n");
+	client.write("Connection: close\r\n");
+	client.write("Content-Length: ");
+	client.write(String(file->size()).c_str());
+	client.write("\r\nfilename: ");
+	client.write(file->name());
+	client.write("\r\nX-API-Key: ");
+	client.write(basePreferences->getDeviceKey().c_str());
+	client.write("\r\n\r\n");
+	client.flush();
+
+	char buff[512];
+	int currentRead;
+	int clientWritten;
+#ifdef DEBUG_ETHERNET
+	Serial.println("Ethernet : sending file content : "+String(file->size())+" bytes");
+#endif
+	sizePOSTTotal = file->size();
+	sizePOSTSent = 0;
+	while(sizePOSTSent < sizePOSTTotal && client.connected()){
+		currentRead = file->readBytes(buff, 512);
+		clientWritten = 0;
+		while(currentRead > clientWritten && client.connected()){
+			clientWritten += client.write(buff+clientWritten, currentRead);
+			client.flush();
+			vTaskDelay(20);
+			esp_task_wdt_reset();
+		}
+		sizePOSTSent += currentRead;
+	}
+	sizePOSTTotal = -1;
+	sizePOSTSent = -1;
+
+#ifdef DEBUG_ETHERNET
+	Serial.println("Ethernet : done sending file content");
+#endif
+
+	unsigned long expire = millis() + 30*1000;
+	String responseStr = "";
+	while(millis() < expire && client.connected()){
+		if(client.available()){
+			responseStr = client.readString();
+		}
+		else{
+			vTaskDelay(pdMS_TO_TICKS(200));
+		}
+		esp_task_wdt_reset();
+	}
+
+	client.stop();
+
+	HttpParser httpParser;
+	httpParser.parseResponse(responseStr);
+
+	if(httpParser.getStatusCode() == 200){
+#ifdef DEBUG_ETHERNET
+		Serial.println("File sent successfully !");
+#endif
+		return true;
+	}
+#ifdef DEBUG_ETHERNET
+	Serial.println("Wrong return code sending file : "+String(httpParser.getStatusCode()));
+	Serial.println("Reponse body :");
+	Serial.println(httpParser.getBody());
+#endif
+	return false;
+}
+
+int BaseEthernet::getSizePostTotal() const {
+	return sizePOSTTotal;
+}
+
+int BaseEthernet::getSizePostSent() const {
+	return sizePOSTSent;
 }
 

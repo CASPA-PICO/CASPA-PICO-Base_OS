@@ -9,6 +9,7 @@
 #include <esp_task_wdt.h>
 
 #include "BasePreferences.h"
+#include "HttpParser.h"
 #include "favicon.h"
 
 #define PORT_DNS 53
@@ -50,6 +51,11 @@ public:
 	void loadRouterSettingsFromPreferences();
 
 	String wifiHttpGet(const String& path);
+	bool sendFileHTTPPost(const String& path, File *file);
+
+	int getSizePostTotal() const;
+
+	int getSizePostSent() const;
 
 private:
 	IPAddress apIP = IPAddress(192,168,0,1);
@@ -69,6 +75,9 @@ private:
 
 	BasePreferences *preferences;
 	bool requestNetworkRefresh = false;
+
+	int sizePOSTTotal = -1;
+	int sizePOSTSent = -1;
 };
 
 #endif //BASE_OS_BASEWIFI_H

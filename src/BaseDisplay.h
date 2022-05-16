@@ -6,27 +6,39 @@
 #include "BaseEthernet.h"
 #include "BasePreferences.h"
 #include "BaseWifi.h"
+#include "BaseBluetooth.h"
 
 #define PIN_SDA SDA
 #define PIN_SCL SCL
 
 class BaseDisplay {
 public:
-	enum State {Booting, Idle, WebAuthentication, WebAuthenticationCode, WebAuthenticationFailed, BluetoothTransfer, DataTransfer};
+	enum State {Booting, Idle, Error, WebAuthentication, WebAuthenticationCode, DataTransfer};
 	BaseDisplay(BasePreferences *basePreferences);
 	void updateDisplay();
 	void setEthernetStatus(BaseEthernet::Status status);
 	void setWifiStatus(BaseWifi::Wifi_Status status);
+	void setBluetoothStatus(BaseBluetooth::Status status);
+	void setBluetoothProgress(int bytesReceived, int totalBytes);
+	void setInternetProgress(int bytesSent, int totalBytes);
 
 	void setState(State newState);
+	void showError(String errorTitle, String errorStr);
 
 private:
 	SH1106Wire display;
 	State state;
 	BaseEthernet::Status ethernetStatus;
 	BaseWifi::Wifi_Status wifiStatus;
+	BaseBluetooth::Status bluetoothStatus;
 	BasePreferences *basePreferences;
 	bool blink = false;
+	String errorTitle, errorStr;
+
+	int bluetoothBytesReceived, bluetoothTotalBytes;
+	int bluetoothETA;
+	int internetBytesSent, internetTotalBytes;
+	int internetETA;
 };
 
 //Icons
@@ -55,5 +67,12 @@ const unsigned char epd_bitmap_wifi [] PROGMEM = {
 		0x00, 0x00, 0x00, 0x00, 0xc0, 0x03, 0xf8, 0x1f, 0x7e, 0x7e, 0x8f, 0xf1, 0xf3, 0x4f, 0xfc, 0x1f,
 		0x18, 0x18, 0xe0, 0x07, 0xe0, 0x07, 0x00, 0x00, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
+
+// 'bluetooth', 16x16px
+const unsigned char epd_bitmap_bluetooth [] PROGMEM = {
+		0x00, 0x00, 0x80, 0x00, 0xc0, 0x00, 0xa0, 0x08, 0x90, 0x0c, 0xb0, 0x06, 0xe0, 0x03, 0xc0, 0x01,
+		0xc0, 0x01, 0xe0, 0x03, 0xb0, 0x06, 0x90, 0x0c, 0xa0, 0x08, 0xc0, 0x00, 0x80, 0x00, 0x00, 0x00
+};
+
 
 #endif //BASE_OS_BASEDISPLAY_H
