@@ -35,11 +35,17 @@ void BasePreferences::removeDeviceKeys() {
 }
 
 String BasePreferences::getRouterSSID() {
-	return preferences.getString("routerSSID", "");
+	if(preferences.isKey("routerSSID")){
+		return preferences.getString("routerSSID", "");
+	}
+	return "";
 }
 
 String BasePreferences::getRouterPassword() {
-	return preferences.getString("routerPass", "");
+	if(preferences.isKey("routerPass")){
+		return preferences.getString("routerPass", "");
+	}
+	return "";
 }
 
 void BasePreferences::setRouterSSIDandPassword(String routerSSID, String routerPassword) {

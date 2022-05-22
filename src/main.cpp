@@ -43,7 +43,7 @@ void setup() {
 	while(baseWifi == nullptr){ vTaskDelay(pdMS_TO_TICKS(500));}
 	xTaskCreatePinnedToCore(displayTask, "Display task", 2*1024, nullptr, 5, &displayTask_handle, 0);
 	while(baseDisplay == nullptr){ vTaskDelay(pdMS_TO_TICKS(500));}
-	xTaskCreatePinnedToCore(internetTask, "Internet task", 6*1024, nullptr, 4, &internetTask_handle, 0);
+	xTaskCreatePinnedToCore(internetTask, "Internet task", 15*1024, nullptr, 4, &internetTask_handle, 0);
 	while(baseInternet == nullptr){ vTaskDelay(pdMS_TO_TICKS(500));}
 
 	esp_task_wdt_init(2*60, true);

@@ -6,8 +6,9 @@
 #define ETHERNET_RESET_PIN 26
 #define ETHERNET_INT_PIN 0
 
-//#define SERVER_URL "192.168.0.1"
-#define SERVER_URL "10.42.0.1"
+#define SYNC_SERVER_URL "caspa.icare.univ-lille.fr"
+#define SYNC_SERVER_PORT 443
+#define SYNC_SERVER_USE_HTTPS
 
 #define DEBUG_ETHERNET
 
@@ -19,6 +20,9 @@
 #include "HttpParser.h"
 #include "BasePreferences.h"
 #include <sys/time.h>
+
+#include <SSLClient.h>
+#include "ta.h"
 
 class BaseEthernet {
 public:

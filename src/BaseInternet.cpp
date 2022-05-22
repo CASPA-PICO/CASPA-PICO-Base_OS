@@ -44,6 +44,9 @@ bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 		}
 	}
 
+#ifdef DEBUG_ETHERNET
+	Serial.println("Time result str : "+resultStr);
+#endif
 	unsigned long long result = 0;
 	for (int i = 0; i < resultStr.length() && resultStr[i] >= '0' && resultStr[i] <= '9'; ++i) {
 		result = result * 10 + resultStr[i] - '0';
@@ -146,8 +149,14 @@ void BaseInternet::syncLocalFiles(BaseInternet::Source source) {
 		File file = root.openNextFile();
 		String filePath;
 		while(file){
+			if(file.size() == 0){
+				file.close();
+				SPIFFS.remove(filePath.c_str());
+				continue;
+			}
+
 			if(baseEthernet->sendFileHTTPPost("/api/devices/uploadData", &file)){
-#ifdef DEBUG_WIFI
+#ifdef DEBUG_ETHERNET
 				Serial.println("Successfully sent file over ethernet : "+String(file.path()));
 #endif
 				filePath = file.path();

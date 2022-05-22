@@ -5,7 +5,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <DNSServer.h>
-#include <HTTPClient.h>
+#include "CustomHTTPClient.h"
 #include <esp_task_wdt.h>
 
 #include "BasePreferences.h"
@@ -18,7 +18,10 @@
 #define WIFI_PASSWORD "Caspa123"
 
 #define DEBUG_WIFI
-#define SERVER_URL "192.168.43.183"
+//#define SYNC_SERVER_URL "192.168.43.183"
+#define SYNC_SERVER_URL "caspa.icare.univ-lille.fr"
+#define SYNC_SERVER_PORT 443
+#define SYNC_SERVER_USE_HTTPS
 
 class BaseWifi : public AsyncWebHandler{
 public:

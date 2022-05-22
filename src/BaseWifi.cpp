@@ -244,15 +244,19 @@ void BaseWifi::loadRouterSettingsFromPreferences() {
 }
 
 String BaseWifi::wifiHttpGet(const String &path) {
-	HTTPClient http;
+	CustomHTTPClient http;
 	http.setTimeout(10*1000);
 	http.setConnectTimeout(10*1000);
 #ifdef DEBUG_WIFI
-	Serial.println(String("Connecting to ") + String(SERVER_URL)+path);
+	Serial.println(String("Connecting to ") + String(SYNC_SERVER_URL) + path);
 #endif
-	if(!http.begin(SERVER_URL, 80, path)) {
+#ifdef SYNC_SERVER_USE_HTTPS
+	if(!http.begin(SYNC_SERVER_URL, SYNC_SERVER_PORT, path, CustomHTTPClient::getRootCA())) {
+#else
+		if(!http.begin(SYNC_SERVER_URL, SYNC_SERVER_PORT, path)) {
+#endif
 #ifdef DEBUG_WIFI
-		Serial.println(String("Couldn't connect to ") + String(SERVER_URL) + String(" on port 80 !"));
+		Serial.println(String("Couldn't connect to ") + String(SYNC_SERVER_URL) + String(" on port ") + String(SYNC_SERVER_PORT));
 #endif
 		return "";
 	}
@@ -270,22 +274,26 @@ String BaseWifi::wifiHttpGet(const String &path) {
 }
 
 bool BaseWifi::sendFileHTTPPost(const String &path, File *file) {
-	HTTPClient http;
+	CustomHTTPClient http;
 	http.setTimeout(10*1000);
 	http.setConnectTimeout(10*1000);
 #ifdef DEBUG_WIFI
-	Serial.println(String("Connecting to ") + String(SERVER_URL)+path);
+	Serial.println(String("Connecting to ") + String(SYNC_SERVER_URL) + path);
 #endif
-	if(!http.begin(SERVER_URL, 80)) {
+#ifdef SYNC_SERVER_USE_HTTPS
+	if(!http.begin(SYNC_SERVER_URL, SYNC_SERVER_PORT, "", CustomHTTPClient::getRootCA())) {
+#else
+		if(!http.begin(SYNC_SERVER_URL, SYNC_SERVER_PORT)) {
+#endif
 #ifdef DEBUG_WIFI
-		Serial.println(String("Couldn't begin connection to ") + String(SERVER_URL) + String(" on port 80 !"));
+		Serial.println(String("Couldn't begin connection to ") + String(SYNC_SERVER_URL) + String(" on port ") + String(SYNC_SERVER_PORT));
 #endif
 		return false;
 	}
 
-	if(!http.connect()){
+	if(!http.startConnection()){
 #ifdef DEBUG_WIFI
-		Serial.println(String("Couldn't connect to ") + String(SERVER_URL) + String(" on port 80 !"));
+		Serial.println(String("Couldn't connect to ") + String(SYNC_SERVER_URL) + String(" on port ") + String(SYNC_SERVER_PORT));
 #endif
 	}
 
@@ -303,7 +311,9 @@ bool BaseWifi::sendFileHTTPPost(const String &path, File *file) {
 	stream->write(path.c_str());
 	stream->write(" HTTP/1.1\r\n");
 	stream->write("Connection: close\r\n");
-	stream->write("Content-Length: ");
+	stream->write("Host: ");
+	stream->write(SYNC_SERVER_URL);
+	stream->write("\r\nContent-Length: ");
 	stream->write(String(file->size()).c_str());
 	stream->write("\r\nfilename: ");
 	stream->write(file->name());

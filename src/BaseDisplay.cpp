@@ -83,7 +83,7 @@ void BaseDisplay::updateDisplay() {
 		display.drawProgressBar(4, y-4, display.getWidth()-8, 8, bluetoothBytesReceived*100/bluetoothTotalBytes);
 		display.setFont(ArialMT_Plain_10);
 		display.setTextAlignment(TEXT_ALIGN_LEFT);
-		display.drawString(38, 2, "Transfert bluetooth");
+		display.drawString(38, 2, "Transfert Bluetooth");
 		if(bluetoothETA != -1){
 			char str[50];
 			sprintf(str, "Temps restant : %d:%02d", bluetoothETA/60, bluetoothETA%60);

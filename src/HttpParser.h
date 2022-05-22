@@ -8,7 +8,7 @@ class HttpParser {
 public :
 	HttpParser();
 
-	static String getRequestStr(const String& path);
+	static String getRequestStr(const String& path, const String& host);
 	static String getReponseStr(const String& body);
 
 	Dictionary *getHeadersMap() { return headersMap; }
@@ -35,6 +35,8 @@ private :
 	int statusCode;
 	String requestPath;
 	String requestMethod;
+
+	static uint64_t StrToHex(const char* str);
 };
 
 #endif

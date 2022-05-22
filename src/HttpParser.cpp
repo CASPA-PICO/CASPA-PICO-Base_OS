@@ -3,9 +3,10 @@
 HttpParser::HttpParser() {
 }
 
-String HttpParser::getRequestStr(const String& path) {
+String HttpParser::getRequestStr(const String& path, const String& host) {
 	String request = String("GET " + path + " HTTP/1.1\r\n");
 	request += "Connection: close\r\n";
+	request += "Host: "+host+"\r\n";
 	request += "\r\n";
 	return request;
 }
@@ -36,7 +37,6 @@ void HttpParser::parseResponse(const String &responseStr) {
 	headers = responseStr.substring(0, responseStr.indexOf("\r\n\r\n")) + "\r\n";
 	statusCode = responseStr.substring(responseStr.indexOf(" "),
 									   responseStr.indexOf(" ", responseStr.indexOf(" ") + 1)).toInt();
-	body = responseStr.substring(responseStr.indexOf("\r\n\r\n") + 4);
 	headersMap = new Dictionary();
 
 	//Fill the headersMap
@@ -49,6 +49,23 @@ void HttpParser::parseResponse(const String &responseStr) {
 		headersMap->insert(temp.substring(0, temp.indexOf(": ")),
 						   temp.substring(temp.indexOf(": ") + 2, temp.indexOf("\r\n")));
 		temp = temp.substring(temp.indexOf("\r\n") + 2);
+	}
+
+	if(headersMap->search("Transfer-Encoding").equals("chunked")){
+		int debut = responseStr.indexOf("\r\n\r\n") + 4;
+		int length;
+		while(debut < responseStr.length()-1){
+			length = (int)StrToHex(responseStr.substring(debut, responseStr.indexOf("\r\n", debut)).c_str());
+			if(length == 0){
+				break;
+			}
+			debut = responseStr.indexOf("\r\n", debut) + 2;
+			body += responseStr.substring(debut, debut+length);
+			debut += length+2;
+		}
+	}
+	else{
+		body = responseStr.substring(responseStr.indexOf("\r\n\r\n") + 4);
 	}
 }
 
@@ -69,4 +86,9 @@ String HttpParser::getReponseStr(const String &body) {
 	response += "\r\n";
 	response += body;
 	return response;
+}
+
+uint64_t HttpParser::StrToHex(const char* str)
+{
+	return (uint64_t) strtoull(str, nullptr, 16);
 }
