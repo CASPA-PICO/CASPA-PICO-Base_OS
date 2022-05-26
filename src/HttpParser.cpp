@@ -3,6 +3,12 @@
 HttpParser::HttpParser() {
 }
 
+/**
+ * Renvoie une requête HTTP GET (pour l'écrire sur un socket TCP)
+ * @param path : chemin de la requête HTTP GET
+ * @param host : host de la requête HTTP GET
+ * @return Renvoie une chaîne de caractère contenant la requête HTTP GET
+ */
 String HttpParser::getRequestStr(const String& path, const String& host) {
 	String request = String("GET " + path + " HTTP/1.1\r\n");
 	request += "Connection: close\r\n";
@@ -32,14 +38,19 @@ void HttpParser::parseRequestHeaders(const String &requestStr) {
 	}
 }
 
+/**
+ * Lit la réponse du serveur et la "met en forme" pour une lecture plus facile
+ * (Headers dans un dictionnaire et corps de la réponse dans une seule chaîne de caractère)
+ * @param responseStr : chaîne de caractère contenant la réponse du serveur web
+ */
 void HttpParser::parseResponse(const String &responseStr) {
-	//split headers from body and get status code
+	//On séparer les entêtes de la réponse du corps de la réponse et on récupère le code de retour
 	headers = responseStr.substring(0, responseStr.indexOf("\r\n\r\n")) + "\r\n";
 	statusCode = responseStr.substring(responseStr.indexOf(" "),
 									   responseStr.indexOf(" ", responseStr.indexOf(" ") + 1)).toInt();
 	headersMap = new Dictionary();
 
-	//Fill the headersMap
+	//On remplit le dictionnaire des entêtes
 	String temp = headers.substring(headers.indexOf("\r\n") + 2);
 	if (temp.lastIndexOf("\r\n") != temp.length() - 2) {
 		temp = temp + "\r\n";
@@ -51,6 +62,7 @@ void HttpParser::parseResponse(const String &responseStr) {
 		temp = temp.substring(temp.indexOf("\r\n") + 2);
 	}
 
+	//On lit le corps de la réponse (qui peut être fragmenté si l'entête Transfer-Encoding: chunked est présent)
 	if(headersMap->search("Transfer-Encoding").equals("chunked")){
 		int debut = responseStr.indexOf("\r\n\r\n") + 4;
 		int length;
@@ -87,7 +99,12 @@ String HttpParser::getReponseStr(const String &body) {
 	response += body;
 	return response;
 }
-
+/**
+ * Converti une chaîne de caractères hexadécimaux en chiffre représenté par cette chaîne de caractère
+ * Ex : "4f" -> 79
+ * @param str : chaîne de caractères hexadécimaux
+ * @return Chiffre décimal représenté par la chaîne de caractère
+ */
 uint64_t HttpParser::StrToHex(const char* str)
 {
 	return (uint64_t) strtoull(str, nullptr, 16);

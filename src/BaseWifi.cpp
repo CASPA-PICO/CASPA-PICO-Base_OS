@@ -7,6 +7,9 @@ BaseWifi::BaseWifi(BasePreferences *basePreferences) : webServer(AsyncWebServer(
 	webServer.addHandler(this);
 }
 
+/**
+ * Démarrage du point d'accès
+ */
 void BaseWifi::startAccessPoint() {
 	if(!WiFi.mode(WIFI_AP_STA)){
 #ifdef DEBUG_WIFI
@@ -26,6 +29,9 @@ void BaseWifi::startAccessPoint() {
 	loadRouterSettingsFromPreferences();
 }
 
+/**
+ * Arrêt du point d'accès
+ */
 void BaseWifi::stopAccessPoint() {
 	WiFi.mode(WIFI_STA);
 	webServer.end();
@@ -39,6 +45,9 @@ BaseWifi::DNS_Status BaseWifi::getDnsStatus() const {
 	return dnsStatus;
 }
 
+/**
+ * Démarrage du DNS
+ */
 void BaseWifi::startDNSServer() {
 	if(dnsStatus == Stopped) {
 		dnsServer.start(PORT_DNS, "*", apIP);
@@ -49,6 +58,9 @@ void BaseWifi::startDNSServer() {
 	}
 }
 
+/**
+ * Arrêt du DNS
+ */
 void BaseWifi::stopDNSServer() {
 	if(dnsStatus == Running) {
 #ifdef DEBUG_WIFI
@@ -71,12 +83,20 @@ bool BaseWifi::canHandle(AsyncWebServerRequest *request) {
 	return true;
 }
 
+/**
+ * Traite la requête d'un utilisateur qui se connecte au portail (pour saisir son mot de passe Wifi)
+ * @param request
+ */
 void BaseWifi::handleRequest(AsyncWebServerRequest *request) {
 	if(request->host() != "base.caspa-pico.fr" && wifiStatus != Connected){
 		request->redirect("http://base.caspa-pico.fr");
 		return;
 	}
 	else if(request->method() == HTTP_GET){
+		/* Si l'utilisateur veut afficher la page d'accueil, on lui montre la page de connexion si la base n'est pas connectée
+		 * ou la page "Connexion en cours" si la base est en train de se connecter, ou la page "Connecté" si la base
+		 * est connectée
+		 */
 		if(request->url() == "/"){
 			if(wifiStatus == Connected){
 				AsyncResponseStream *response = request->beginResponseStream("text/html");
@@ -95,6 +115,7 @@ void BaseWifi::handleRequest(AsyncWebServerRequest *request) {
 			response->print(generatePortal());
 			request->send(response);
 		}
+		//On envoie la favicon.ico (pour afficher une icône à l'onglet du site)
 		else if(request->url() == "/favicon.ico"){
 #ifdef DEBUG_WIFI
 			Serial.println("Wifi : sending favicon");
@@ -102,6 +123,7 @@ void BaseWifi::handleRequest(AsyncWebServerRequest *request) {
 			AsyncWebServerResponse *response = request->beginResponse_P(200, "image/x-icon", favicon_ico, favicon_ico_len);
 			request->send(response);
 		}
+		//Si l'utilisateur clique le bouton rafraichir les réseau wifi
 		else if(request->url() == "/refreshWifi"){
 #ifdef DEBUG_WIFI
 			Serial.println("Refreshing wifi networks");
@@ -117,6 +139,7 @@ void BaseWifi::handleRequest(AsyncWebServerRequest *request) {
 #endif
 			request->redirect("/");
 		}
+		//Si l'utilisateur tente de se connecter à un réseau en ayant saisi son mot de passe
 		else if(request->url() == "/connect"){
 			if(request->hasParam("SSID") && request->getParam("SSID")->value() != ""
 			   && request->hasParam("password") && request->getParam("password")->value() != ""){
@@ -171,6 +194,9 @@ void BaseWifi::failedConnection() {
 	routerPassword = "";
 }
 
+/**
+ * @return Renvoie la page d'accueil du portail de connexion
+ */
 String BaseWifi::generatePortal() const{
 	String result =		"<!doctype html><html lang=\"fr\">"
 						"<head><meta charset='UTF-8'>"
@@ -198,6 +224,9 @@ String BaseWifi::generatePortal() const{
 	return result;
 }
 
+/**
+ * @return Renvoie la page "Connexion en cours"
+ */
 String BaseWifi::generateWaitingPage() const {
 	String result =		"<!doctype html><html lang=\"fr\">"
 						   "<head><meta charset='UTF-8'>"
@@ -219,6 +248,9 @@ String BaseWifi::generateWaitingPage() const {
 	return result;
 }
 
+/**
+ * @return Renvoie la page "Connecté"
+ */
 String BaseWifi::generateConnectedPage() const {
 	String result =		"<!doctype html><html lang=\"fr\">"
 						   "<head><meta charset='UTF-8'>"
@@ -243,6 +275,11 @@ void BaseWifi::loadRouterSettingsFromPreferences() {
 	routerPassword = preferences->getRouterPassword();
 }
 
+/**
+ * Effectue une requête HTTP GET au serveur web
+ * @param path : chemin de la requête
+ * @return Renvoie une chaîne de caractère contenant la réponse du serveur (vide en cas d'échec)
+ */
 String BaseWifi::wifiHttpGet(const String &path) {
 	CustomHTTPClient http;
 	http.setTimeout(10*1000);
@@ -273,6 +310,12 @@ String BaseWifi::wifiHttpGet(const String &path) {
 	return "";
 }
 
+/**
+ * Envoie un fichier dans une requête HTTP POST au serveur web
+ * @param path : chemin de la requête
+ * @param file : fichier à transférer
+ * @return True si le fichier a correctement été envoyé, False en cas d'échec
+ */
 bool BaseWifi::sendFileHTTPPost(const String &path, File *file) {
 	CustomHTTPClient http;
 	http.setTimeout(10*1000);
@@ -307,6 +350,7 @@ bool BaseWifi::sendFileHTTPPost(const String &path, File *file) {
 #endif
 		return false;
 	}
+	//On écrit l'entête de la requête POST
 	stream->write("POST ");
 	stream->write(path.c_str());
 	stream->write(" HTTP/1.1\r\n");
@@ -322,6 +366,8 @@ bool BaseWifi::sendFileHTTPPost(const String &path, File *file) {
 	stream->write("\r\n\r\n");
 	stream->flush();
 
+
+	//On envoie le corps de la requête POST (le contenu du fichier)
 	char buff[512];
 	int currentRead;
 	int streamWritten;
@@ -348,6 +394,7 @@ bool BaseWifi::sendFileHTTPPost(const String &path, File *file) {
 	Serial.println("Wifi : done sending file content");
 #endif
 
+	//On lit la réponse du serveur
 	unsigned long expire = millis() + 30*1000;
 	String responseStr = "";
 	while(millis() < expire && stream->connected()){

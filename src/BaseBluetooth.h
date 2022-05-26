@@ -1,7 +1,9 @@
 #ifndef BASE_OS_BASEBLUETOOTH_H
 #define BASE_OS_BASEBLUETOOTH_H
 
+//Pin du microcontroleur sur lequel est branché le reed switch
 #define PIN_SENSOR_DETECT 17
+//Affichage des informations de débogage dans la console
 #define DEBUG_BLUETOOTH_SYNC
 
 #include "PLTP.h"

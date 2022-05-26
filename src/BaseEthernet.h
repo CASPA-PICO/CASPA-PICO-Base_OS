@@ -1,15 +1,19 @@
 #ifndef BASEETHERNET_H
 #define BASEETHERNET_H
 
+//Adresse MAC de l'Ethernet
 #define ETHERNET_MAC {0x00, 0x08, 0xDC, 0x68, 0x4E, 0x2C}
+//Configuration des pins de l'Ethernet
 #define ETHERNET_CS_PIN 25
 #define ETHERNET_RESET_PIN 26
 #define ETHERNET_INT_PIN 0
 
+//Configuration du serveur web
 #define SYNC_SERVER_URL "caspa.icare.univ-lille.fr"
 #define SYNC_SERVER_PORT 443
 #define SYNC_SERVER_USE_HTTPS
 
+//Affichage des informations de débogage dans la console
 #define DEBUG_ETHERNET
 
 #include <SPI.h>

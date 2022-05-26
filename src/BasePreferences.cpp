@@ -1,9 +1,9 @@
-//
-// Created by Nicolas on 11/03/2022.
-//
-
 #include "BasePreferences.h"
 
+/**
+ * Récupère des paramètres enregistrés dans le stockage local du microcontroleur
+ * Ces paramètres restent même après un redémarrage du programme ou une coupure de l'alimentation de la base
+ */
 BasePreferences::BasePreferences() {
 	preferences.begin("CASPA-PICO", false);
 }

@@ -1,9 +1,17 @@
 #include "CustomHTTPClient.h"
 
+/**
+ * Démarre la connexion au serveur web (ouvre le socket TCP)
+ * @return True si le socket a bien été ouvert, False en cas d'échec
+ */
 bool CustomHTTPClient::startConnection() {
 	return this->connect();
 }
 
+/**
+ * @return Renvoie le certificat racine afin de vérifier que la nous somme connecté au bon serveur lors de
+ * l'utilisation de l'HTTPS
+ */
 const char *CustomHTTPClient::getRootCA() {
 	const char *root_ca = "-----BEGIN CERTIFICATE-----\n"
 						  "MIIG1TCCBL2gAwIBAgIQbFWr29AHksedBwzYEZ7WvzANBgkqhkiG9w0BAQwFADCB\n"

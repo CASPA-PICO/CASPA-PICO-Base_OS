@@ -8,6 +8,7 @@
 #include "BaseWifi.h"
 #include "BaseBluetooth.h"
 
+#define FLIP_SCREEN_VERTICALLY false
 #define PIN_SDA SDA
 #define PIN_SCL SCL
 

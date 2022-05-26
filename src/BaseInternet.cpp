@@ -4,11 +4,19 @@ BaseInternet::BaseInternet(BaseEthernet *baseEthernet, BaseWifi *baseWifi, BaseB
 
 }
 
+/**
+ * On tente de récupérer l'heure depuis le serveur pour mettre à jour l'heure de la base
+ * @param source Mode de connexion à internet (Ethernet ou Wifi)
+ * @param retry Nombre de tentative avec abandon
+ * @return True si la base a bien récupéré l'heure, False en cas d'échec
+ */
 bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 #ifdef DEBUG_ETHERNET
 	Serial.println("Getting time from server...");
 #endif
 	vTaskDelay(pdMS_TO_TICKS(1000));
+
+	//On tente de récupérer l'heure depuis le serveur web
 	String resultStr;
 	if(source == EthernetSource) {
 		String serverResponse = baseEthernet->ethernetHttpGet("/api/time");
@@ -44,6 +52,7 @@ bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 		}
 	}
 
+	//Une fois qu'on a la réponse du serveur, on la lit et on change l'heure du microcontroleur
 #ifdef DEBUG_ETHERNET
 	Serial.println("Time result str : "+resultStr);
 #endif
@@ -68,6 +77,12 @@ bool BaseInternet::getTimeFromServer(BaseInternet::Source source, int retry) {
 	return false;
 }
 
+/**
+ * Tente de récupérer le token depuis le serveur
+ * @param source Mode de connexion à internet (Ethernet ou Wifi)
+ * @param retry Nombre de tentative avant abandon
+ * @return True si la base a bien récupéré un token depuis le serveur, False en cas d'échec
+ */
 bool BaseInternet::getDeviceKeyFromServer(BaseInternet::Source source, int retry) {
 	if(source == EthernetSource){
 		String serverResponse = baseEthernet->ethernetHttpGet(String("/api/devices/activate?activationKey=") + basePreferences->getDeviceActivationKey());
@@ -106,6 +121,12 @@ bool BaseInternet::getDeviceKeyFromServer(BaseInternet::Source source, int retry
 	return false;
 }
 
+/**
+ * Vérifie si le token de la base existe bien sur le serveur
+ * @param source Mode de connexion à internet (Ethernet ou Wifi)
+ * @param retry Nombre de tentative avant abandon
+ * @return True si le token existe bel et bien sur le serveur, False sinon
+ */
 bool BaseInternet::checkDeviceOnServer(Source source, int retry) {
 	if(source == EthernetSource){
 		String serverResponse;
@@ -143,6 +164,11 @@ bool BaseInternet::checkDeviceOnServer(Source source, int retry) {
 	return false;
 }
 
+/**
+ * Lance la synchronisation des fichiers locaux de la base avec le serveur web
+ * (Mise en ligne des données récupérés depuis le capteur)
+ * @param source Mode de connexion à internet (Ethernet ou Wifi)
+ */
 void BaseInternet::syncLocalFiles(BaseInternet::Source source) {
 	if(source == EthernetSource){
 		File root = SPIFFS.open("/", FILE_READ);
@@ -175,6 +201,11 @@ void BaseInternet::syncLocalFiles(BaseInternet::Source source) {
 		String filePath;
 
 		while(file){
+			if(file.size() == 0){
+				file.close();
+				SPIFFS.remove(filePath.c_str());
+				continue;
+			}
 			if(baseWifi->sendFileHTTPPost("/api/devices/uploadData", &file)){
 #ifdef DEBUG_WIFI
 				Serial.println("Successfully sent file over wifi : "+String(file.path()));

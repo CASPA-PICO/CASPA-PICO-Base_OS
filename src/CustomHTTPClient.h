@@ -1,7 +1,3 @@
-//
-// Created by Nicolas on 21/05/2022.
-//
-
 #ifndef BASE_OS_CUSTOMHTTPCLIENT_H
 #define BASE_OS_CUSTOMHTTPCLIENT_H
 

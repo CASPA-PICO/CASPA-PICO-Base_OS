@@ -12,16 +12,19 @@
 #include "HttpParser.h"
 #include "favicon.h"
 
+//Configuration du point d'accès / du portail
 #define PORT_DNS 53
 #define PORT_SERVER 80
 #define WIFI_SSID "Caspa-PICO"
 #define WIFI_PASSWORD "Caspa123"
 
-#define DEBUG_WIFI
-//#define SYNC_SERVER_URL "192.168.43.183"
+//Configuration du serveur web
 #define SYNC_SERVER_URL "caspa.icare.univ-lille.fr"
 #define SYNC_SERVER_PORT 443
 #define SYNC_SERVER_USE_HTTPS
+
+//Affichage des informations de débogage dans la console
+#define DEBUG_WIFI
 
 class BaseWifi : public AsyncWebHandler{
 public:

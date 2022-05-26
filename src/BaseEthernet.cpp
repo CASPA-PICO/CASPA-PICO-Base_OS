@@ -1,6 +1,7 @@
 #include "BaseEthernet.h"
 
 BaseEthernet::BaseEthernet(BasePreferences *basePreferences): basePreferences(basePreferences) {
+	//On configure les pins de l'Ethernet
 	pinMode(ETHERNET_RESET_PIN, OUTPUT);
 	digitalWrite(ETHERNET_RESET_PIN, HIGH);
 	Ethernet.init(ETHERNET_CS_PIN);
@@ -13,6 +14,10 @@ BaseEthernet::BaseEthernet(BasePreferences *basePreferences): basePreferences(ba
 	}
 }
 
+/**
+ * Initialisation de l'Ethernet, tente de se connecter et d'obtenir une adresse IP
+ * @return True si l'Ethernet s'est connecté avec succès, False en cas d'échec
+ */
 bool BaseEthernet::initEthernet() {
 	byte mac[] = ETHERNET_MAC;
 #ifdef DEBUG_ETHERNET
@@ -43,6 +48,11 @@ bool BaseEthernet::initEthernet() {
 	return true;
 }
 
+/**
+ *	Effectue une requête HTTP GET sur le serveur web
+ * @param path : Chemin où effectuer la requête GET
+ * @return Renvoie une chaîne de caractère contenant la réponse à la requête
+ */
 String BaseEthernet::ethernetHttpGet(const String& path) {
 #ifdef SYNC_SERVER_USE_HTTPS
 	EthernetClient client2;
@@ -65,6 +75,7 @@ String BaseEthernet::ethernetHttpGet(const String& path) {
 		return "";
 	}
 
+	//On récupère la requête brute à écrire sur le socket TCP
 	String request = HttpParser::getRequestStr(path, SYNC_SERVER_URL);
 
 #ifdef DEBUG_ETHERNET
@@ -72,11 +83,13 @@ String BaseEthernet::ethernetHttpGet(const String& path) {
 	Serial.println(request);
 #endif
 
+	//On écrit la requête sur le socket TCP
 	char requestArray[256];
 	request.toCharArray(requestArray, 256);
 	client.write((uint8_t*)requestArray, strlen(requestArray));
 	client.flush();
 
+	//On lit la réponse du serveur
 	int len;
 	char buff[256];
 	String resultStr;
@@ -104,6 +117,10 @@ String BaseEthernet::ethernetHttpGet(const String& path) {
 	return resultStr;
 }
 
+/**
+ * Maintient la connexion avec le DHCP
+ * @return True si la connexion est maintenue, False en cas d'échec
+ */
 bool BaseEthernet::keepAlive() {
 	if(Ethernet.hardwareStatus() == EthernetNoHardware){
 		setStatus(NoHardware);
@@ -161,6 +178,12 @@ void BaseEthernet::printStatus(BaseEthernet::Status status) {
 	}
 }
 
+/**
+ * Envoie un fichier dans une requête HTTP POST au serveur web
+ * @param path Chemin où effectuer la requête sur le serveur
+ * @param file Fichier à envoyer dans le corps de la requête POST
+ * @return True si le fichier a bien été envoyé, False sinon
+ */
 bool BaseEthernet::sendFileHTTPPost(const String &path, File *file) {
 #ifdef SYNC_SERVER_USE_HTTPS
 	EthernetClient client2;
@@ -183,7 +206,7 @@ bool BaseEthernet::sendFileHTTPPost(const String &path, File *file) {
 		return "";
 	}
 
-
+	//On écrit la requête HTTP POST sur le socket TCP
 	String request = "POST ";
 	request += path;
 	request += " HTTP/1.1\r\n";
@@ -209,6 +232,7 @@ bool BaseEthernet::sendFileHTTPPost(const String &path, File *file) {
 	client.flush();
 #endif
 
+	//On écrit le fichier sur le socket TCP
 	char buff[512];
 	int currentRead;
 	int clientWritten;
@@ -240,6 +264,7 @@ bool BaseEthernet::sendFileHTTPPost(const String &path, File *file) {
 	Serial.println("Ethernet : done sending file content");
 #endif
 
+	//Une fois le fichier écrit, on lit la réponse du serveur
 	unsigned long expire = millis() + 30*1000;
 	String responseStr = "";
 	while(millis() < expire && client.connected()){

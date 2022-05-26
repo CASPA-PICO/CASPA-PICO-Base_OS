@@ -6,6 +6,9 @@ BaseBluetooth::BaseBluetooth(){
 	lastReceivedFile.totalReceived = -1;
 }
 
+/**
+ * Démarrage de la syncrhonisation Bluetooth avec le capteur
+ */
 void BaseBluetooth::startSync() {
 #ifdef DEBUG_BLUETOOTH_SYNC
 	Serial.println("Begin sync with sensor...");
@@ -24,6 +27,8 @@ void BaseBluetooth::startSync() {
 	Serial.println("PLTP init success !");
 #endif
 	status = Connected;
+
+	//On commence par envoyer l'heure au capteur
 	if(!pltp.sendTime()){
 #ifdef DEBUG_BLUETOOTH_SYNC
 		Serial.println("PLTP failed to send time !");
@@ -36,22 +41,15 @@ void BaseBluetooth::startSync() {
 	lastReceivedFile.totalSize = 1;
 	lastReceivedFile.totalReceived = 0;
 	esp_task_wdt_reset();
-	/*if(!SPIFFS.begin(true)){
-#ifdef DEBUG_BLUETOOTH_SYNC
-		Serial.println("Failed to open SPIFFS !");
-#endif
-		pltp.end();
-		status = Off;
-		return;
-	}*/
 
-	//SPIFFS.format();
 
 	PLTP::Message message;
 	File file;
 	bool doneWritingFile;
-	while(pltp.processMessage(5*1000)){
+	//On boucle tant qu'on reçoit des messages du capteur
+	while(pltp.processMessage(10*1000)){
 		message = pltp.getLastMessage();
+		//Si le message est de type FileInfo : on enregistre les infos sur le fichier qu'on va recevoir et on l'ouvre en vu d'une écriture
 		if(message.type == PLTP::FileInfo){
 			lastReceivedFile.filename = new char[message.size-5];
 			memcpy(&lastReceivedFile.totalSize, &message.content[1], 4);
@@ -70,6 +68,7 @@ void BaseBluetooth::startSync() {
 			Serial.println("Bluetooth receiving file info : "+String(lastReceivedFile.filename)+" ("+String(lastReceivedFile.totalSize)+" bytes)");
 #endif
 		}
+		//Si le message est de type FileContent : on écrit dans le fichier son contenu qu'on reçoit
 		else if(message.type == PLTP::FileContent){
 			if(lastReceivedFile.totalSize >= 0){
 				lastReceivedFile.totalReceived += message.size - 1;
@@ -87,14 +86,13 @@ void BaseBluetooth::startSync() {
 						doneWritingFile = true;
 						delete[] lastReceivedFile.filename;
 						lastReceivedFile.filename = nullptr;
-						/*lastReceivedFile.totalSize = -1;
-						lastReceivedFile.totalReceived = 0;*/
 					}
 				}
 			}
 		}
 	}
 
+	//Si la connexion est interrompue avant d'avoir reçu le fichier en entier : on supprime le fichier partiellement reçu
 	if(file && !doneWritingFile){
 #ifdef DEBUG_BLUETOOTH_SYNC
 		Serial.println("File not completely transferred : deleting "+String(lastReceivedFile.filename));
@@ -113,6 +111,9 @@ void BaseBluetooth::startSync() {
 	status = Off;
 }
 
+/**
+ * @return Nombre d'octets reçus pour le fichier en cours de transfert
+ */
 int BaseBluetooth::getBytesReceived() {
 	if(lastReceivedFile.totalSize != -1 && lastReceivedFile.totalReceived != -1){
 		return lastReceivedFile.totalReceived;
@@ -121,6 +122,9 @@ int BaseBluetooth::getBytesReceived() {
 	return -1;
 }
 
+/**
+ * @return Nombre d'octets total (taille du fichier) en cours de transfert
+ */
 int BaseBluetooth::getTotalBytes() {
 	if(lastReceivedFile.totalSize != -1 && lastReceivedFile.totalReceived != -1){
 		return lastReceivedFile.totalSize;

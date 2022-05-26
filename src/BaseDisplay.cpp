@@ -7,7 +7,9 @@ BaseDisplay::BaseDisplay(BasePreferences *basePreferences) : display(0x3c, PIN_S
 	bluetoothETA = -1;
 	internetETA = -1;
 	display.init();
-	//display.flipScreenVertically();
+	if(FLIP_SCREEN_VERTICALLY) {
+		display.flipScreenVertically();
+	}
 	display.setFont(ArialMT_Plain_10);
 	display.clear();
 	short x = display.getWidth() / 2;
@@ -17,9 +19,14 @@ BaseDisplay::BaseDisplay(BasePreferences *basePreferences) : display(0x3c, PIN_S
 	display.display();
 }
 
+/**
+ * Fonction principale, appelée toute les secondes par la tâche affichage
+ */
 void BaseDisplay::updateDisplay() {
 	display.clear();
+	//Blink nous permet de faire clignoter une icône
 	blink = !blink;
+	//On affiche une icône différente en fonction de l'état de la connexion Ethernet
 	switch(ethernetStatus){
 		case BaseEthernet::NoHardware:
 			display.drawIco16x16(0, 0, epd_bitmap_warning, false);
@@ -42,6 +49,7 @@ void BaseDisplay::updateDisplay() {
 			break;
 	}
 
+	//On affiche une icône différente en fonction de l'état de la connexion Wifi
 	if(bluetoothStatus == BaseBluetooth::Off) {
 		switch (wifiStatus) {
 			case BaseWifi::AccessPointWaitingCredentials:
@@ -58,6 +66,7 @@ void BaseDisplay::updateDisplay() {
 		}
 	}
 
+	//On affiche une icône différente en fonction de l'état de la connexion Bluetooth
 	switch(bluetoothStatus){
 		case BaseBluetooth::Off:
 			break;
@@ -71,11 +80,13 @@ void BaseDisplay::updateDisplay() {
 			break;
 	}
 
+	//On récupère l'heure du microcontroleur
 	time_t now;
 	struct tm timeDetails;
 	time(&now);
 	localtime_r(&now, &timeDetails);
 
+	//Si un transfert Bluetooth est en cours, on affiche sa progression
 	if(bluetoothTotalBytes != -1 && bluetoothBytesReceived != -1){
 		display.setFont(ArialMT_Plain_10);
 		short x = display.getWidth() / 2;
@@ -156,7 +167,6 @@ void BaseDisplay::updateDisplay() {
 		}
 	}
 	else{
-		//Unused ?
 		display.setTextAlignment(TEXT_ALIGN_CENTER_BOTH);
 		display.setFont(ArialMT_Plain_10);
 		short x = display.getWidth() / 2;
