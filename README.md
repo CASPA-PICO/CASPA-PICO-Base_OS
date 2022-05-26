@@ -1,6 +1,17 @@
 <h1>CASPA-PICO Capteur OS</h1>
 <p>Le programme est un projet <a href="https://platformio.org/">Platform IO</a> testé sur une ESP32 modèle : <a href="https://www.dfrobot.com/product-2231.html">DFR0654-F</a><br/>
 Il nécessite <b>obligatoirement</b> la bibliothèque <a href="https://github.com/CASPA-PICO/PLTP">PLTP</a> pour fonctionner.</p>
+<h2>Bibliothèques utilisées</h2>
+<ul>
+  <li><a href="https://github.com/platformio/platform-espressif32">Espressif 32: development platform for PlatformIO</a></li>
+  <li><a href="https://github.com/espressif/arduino-esp32">Arduino core for the ESP32</a></li>
+  <li><a href="https://github.com/arkhipenko/Dictionary">Dictionary</a></li>
+  <li><a href="https://github.com/JAndrassy/EthernetENC">EthernetENC</a></li>
+  <li><a href="https://github.com/OPEnSLab-OSU/SSLClient">SSLClient</a></li>
+  <li><a href="https://github.com/ThingPulse/esp8266-oled-ssd1306">ThingPulse OLED SSD1306 (ESP8266/ESP32/Mbed-OS)</a></li>
+  <li><a href="https://github.com/me-no-dev/ESPAsyncWebServer">ESPAsyncWebServer</a></li>
+  <li><a href="https://github.com/me-no-dev/AsyncTCP">AsyncTCP</a></li>
+</ul>
 <h2>Fonctionnement global du programme</h2>
 <p>Lorsque le capteur est connecté à la base, les données sont transmise en Bluetooth du capteur vers le stockage local de la base.<br/>Une fois ce transfert terminé, les données sont transférés du stockage local de la base vers le serveur web</p>
 <h2>Plusieurs tâches tournent en parallèles dans la base</h2>
