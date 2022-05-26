@@ -1,4 +1,4 @@
-<h1>CASPA-PICO Capteur OS</h1>
+<h1>CASPA-PICO Base OS</h1>
 <p>Le programme est un projet <a href="https://platformio.org/">Platform IO</a> testé sur une ESP32 modèle : <a href="https://www.dfrobot.com/product-2231.html">DFR0654-F</a><br/>
 Il nécessite <b>obligatoirement</b> la bibliothèque <a href="https://github.com/CASPA-PICO/PLTP">PLTP</a> pour fonctionner.</p>
 <h2>Bibliothèques utilisées</h2>
