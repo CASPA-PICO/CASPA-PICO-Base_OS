@@ -2,7 +2,8 @@
 <p>Le programme est un projet <a href="https://platformio.org/">Platform IO</a> testé sur une ESP32 modèle : <a href="https://www.dfrobot.com/product-2231.html">DFR0654-F</a><br/>
 Il nécessite <b>obligatoirement</b> la bibliothèque <a href="https://github.com/CASPA-PICO/PLTP">PLTP</a> pour fonctionner.</p>
 <h2>Fonctionnement global du programme</h2>
-<p>Plusieurs tâches tournent en parallèles dans la base :
+<p>Lorsque le capteur est connecté à la base, les données sont transmise en Bluetooth du capteur vers le stockage local de la base.<br/>Une fois ce transfert terminé, les données sont transférés du stockage local de la base vers le serveur web</p>
+<h2>Plusieurs tâches tournent en parallèles dans la base</h2>
 <h3>Tâche Ethernet</h3>
 <p>La tâche Ethernet gère le port Ethernet et sa connexion au réseau, l'obtention d'une adresse IP grâce à un DHCP</p>
 <h3>Tâche Wifi</h3>
