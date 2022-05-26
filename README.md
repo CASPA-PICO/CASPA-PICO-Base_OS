@@ -1,8 +1,8 @@
 <h1>CASPA-PICO Base OS</h1>
-<p>Le programme est un projet <a href="https://platformio.org/">Platform IO</a> testé sur une ESP32 modèle : <a href="https://www.dfrobot.com/product-2231.html">DFR0654-F</a><br/>
-Il nécessite <b>obligatoirement</b> la bibliothèque <a href="https://github.com/CASPA-PICO/PLTP">PLTP</a> pour fonctionner.</p>
+<p>Le programme est un projet <a href="https://platformio.org/">Platform IO</a> testé sur une ESP32 modèle : <a href="https://www.dfrobot.com/product-2231.html">DFR0654-F</a><br/></p>
 <h2>Bibliothèques utilisées</h2>
 <ul>
+  <li><a href="https://github.com/CASPA-PICO/PLTP">PLTP</a></li>
   <li><a href="https://github.com/platformio/platform-espressif32">Espressif 32: development platform for PlatformIO</a></li>
   <li><a href="https://github.com/espressif/arduino-esp32">Arduino core for the ESP32</a></li>
   <li><a href="https://github.com/arkhipenko/Dictionary">Dictionary</a></li>
