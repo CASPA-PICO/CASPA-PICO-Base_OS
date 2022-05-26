@@ -29,5 +29,50 @@ Lorsque des données sont prêtes à être transférer depuis la base, elle se c
 Lorsque la connexion a été établi, elle envoie l'heure puis attend de recevoir tous les fichiers depuis le capteur. Les fichiers récupérés sont enregistrés dans le stockage local de la base, en attente d'être transféré sur internet par la tâche Internet</p>
 <h3>Tâche Affichage</h3>
 <p>La tâche affichage gère l'écran de la base. Elle le met à jour en fonction de l'état des différents composants de la base (Ethernet et Wifi) et en fonction de l'état (transfert Bluetooth, transfert Wifi, authentification web)</p>
+<h2>Configuration du programme</h2>
+<p>Certains fichiers .h sont modifiables afin de changer la configuration du programme :
+<ul>
+  <li><b>BaseBluetooth.h</b> : 
+    <ul>
+      <li><b>PIN_SENSOR_DETECT</b> : Lorsque ce pin est mis à HIGH, lance le transfert des données en Bluetooth (par défaut 17, le pin sur lequel est branché le reed switch)</li>
+      <li><b>DEBUG_BLUETOOTH_SYNC</b> : Affichage des informations de débogage dans la console série (commenter pour désactiver)</li>
+    </ul>
+  </li>
+  <li><b>BaseDisplay.h</b> :
+    <ul><b>FLIP_SCREEN_VERTICALLY</b> : Retourner l'écran verticalement (par défaut False)</ul>
+    <ul><b>PIN_SDA</b> : Pin SDA de l'écran (par défaut SDA)</ul>
+    <ul><b>PIN_SCL</b> : Pin SCL de l'écran (par défaut SCL)</ul>
+  </li>
+  <li><b>BaseEthernet.h :</b>
+    <ul>
+      <li><b>ETHERNET_MAC</b> : Adresse MAC de l'Ethernet</li>
+      <li><b>ETHERNET_CS_PIN</b> : Pin CS (Chip Select) de l'Ethernet (par défaut 25)</li>
+      <li><b>ETHERNET_RESET_PIN</b> : Pin reset de l'Ethernet (par défaut 26)</li>
+      <li><b>SYNC_SERVER_URL</b> : Adresse du serveur web (par défaut caspa.icare.univ-lille.fr)</li>
+      <li><b>SYNC_SERVER_PORT</b> : Port de connexion au serveur web (par défaut 443)</li>
+      <li><b>SYNC_SERVER_USE_HTTPS</b> : Le serveur web utilise l'HTTPS (commenter pour désactiver)</li>
+      <li><b>DEBUG_ETHERNET</b> : Affichage des informations de débogage dans la console série (commenter pour désactiver)</li>
+    </ul>
+  </li>
+  <li><b>BaseWifi.h :</b>
+    <ul>
+      <li><b>PORT_DNS</b> : Port du DNS du microcontrôleur (par défaut 53)</li>
+      <li><b>PORT_SERVER</b> : Port du serveur du portail (par défaut 80)</li>
+      <li><b>WIFI_SSID</b> : Nom du point d'accès (par défaut Caspa-PICO)</li>
+      <li><b>WIFI_PASSWORD</b> : Mot de passe du point d'accès (par défaut Caspa123)</li>
+      <li><b>SYNC_SERVER_URL</b> : Adresse du serveur web (par défaut caspa.icare.univ-lille.fr)</li>
+      <li><b>SYNC_SERVER_PORT</b> : Port de connexion au serveur web (par défaut 443)</li>
+      <li><b>SYNC_SERVER_USE_HTTPS</b> : Le serveur web utilise l'HTTPS (commenter pour désactiver)</li>
+      <li><b>DEBUG_WIFI</b> : Affichage des informations de débogage dans la console série (commenter pour désactiver)</li>
+    </ul>
+  </li>
+  <li><b>CustomHTTPClient.cpp</b> :
+    <ul>
+      <li><b>root_ca</b> : Contient le certificat racine du serveur web (pour le SSL)</li>
+    </ul>
+  <li><b>TA.H</b> : Contient les Trusted Anchors pour le SSL<br/>Pour plus d'information, voir <a href="https://github.com/OPEnSLab-OSU/SSLClient">ici</a> et <a href="https://github.com/OPEnSLab-OSU/SSLClient/blob/master/TrustAnchors.md">ici</a>
+  </li>
+</ul>
+</p>
 <h2>Montage de la base</h2>
 <img src="https://i.ibb.co/0M8Bkfx/sch-ma-interconnexion.jpg" alt="sch-ma-interconnexion" border="0" />
